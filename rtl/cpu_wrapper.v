@@ -30,6 +30,7 @@ module cpu_wrapper
 	output reg        reset_out,
 
 	input             clk,
+	input             clk_fast,
 	input             ph1,
 	input             ph2,
 
@@ -68,7 +69,19 @@ module cpu_wrapper
 
 	output reg  [1:0] cpustate,
 	output reg  [3:0] cacr,
-	output reg [31:0] nmi_addr
+	output reg [31:0] nmi_addr,
+
+	output wire        hybridcpu_rst_n,         
+	output wire        hybridcpu_clk_access,         
+	output wire        hybridcpu_clk_fast,         
+	input wire [22:0] hybridcpu_address,     
+	input wire [1:0]  hybridcpu_byteenable,  
+	input wire        hybridcpu_read,        
+	output  wire [15:0] hybridcpu_readdata,    
+	input  wire        hybridcpu_request, 
+	output  wire        hybridcpu_complete, 
+	input wire        hybridcpu_write,       
+	input wire [15:0] hybridcpu_writedata
 );
 
 assign ramsel       = cpu_req & ~sel_nmi_vector & (sel_zram | sel_chipram | sel_kickram | sel_dd | sel_rtg);
@@ -134,8 +147,31 @@ reg         lds_in;
 reg  [15:0] chip_data;
 reg  [31:0] vbr;
 
+
 always @* begin
-	if(cpucfg[1]) begin
+	if(cpucfg==2'b10) begin
+		// Hybrid
+		cpu_dout     = hybrid_cpu_dout_p;
+		cpu_addr     = hybrid_cpu_addr_p;
+		cpustate     = hybrid_cpustate_p;
+		cacr         = hybrid_cacr_p;
+		vbr          = hybrid_vbr_p;
+		wr           = hybrid_wr_p;
+		uds_in       = hybrid_uds_p;
+		lds_in       = hybrid_lds_p;
+		reset_out    = hybrid_reset_out_p;
+		chip_as      = c_as;
+		chip_rw      = c_rw;
+		chip_uds     = c_uds;
+		chip_lds     = c_lds;
+		chip_addr    = hybrid_cpu_addr_p[23:1];
+		chip_din     = hybrid_cpu_dout_p;
+		chip_data    = chipdout_i;
+		fastchip_sel = cpu_req & !hybrid_cpu_addr_p[31:24];
+		fastchip_lw  = hybrid_longword;
+	end
+	else if(cpucfg==2'b01) begin
+		// TG68K
 		cpu_dout     = cpu_dout_p;
 		cpu_addr     = cpu_addr_p;
 		cpustate     = cpustate_p;
@@ -156,6 +192,7 @@ always @* begin
 		fastchip_lw  = longword;
 	end
 	else begin
+		// FX68
 		cpu_dout     = cpu_dout_o;
 		cpu_addr     = {cpu_addr_o,1'b0};
 		cpustate     = as_o ? 2'b01 : ~{wr_o,wr_o};
@@ -177,6 +214,51 @@ always @* begin
 	end
 end
 
+// Hybrid CPU plumbing
+wire [15:0] hybrid_cpu_dout_p;
+wire [31:0] hybrid_cpu_addr_p;
+wire  [1:0] hybrid_cpustate_p;
+wire  [3:0] hybrid_cacr_p;
+wire [31:0] hybrid_vbr_p;
+wire        hybrid_wr_p;
+wire        hybrid_uds_p;
+wire        hybrid_lds_p;
+wire        hybrid_reset_out_p;
+wire        hybrid_longword;
+
+reg  hybridcpu_request_reg;
+wire  hybridcpu_request_next;
+wire  hybridcpu_request_nocancel_next;
+
+always @(posedge clk) begin
+	if (~reset | ~reset_out) begin
+		hybridcpu_request_reg <= 0;
+	end
+	else begin
+		hybridcpu_request_reg <= hybridcpu_request_next;
+	end
+end
+
+assign hybridcpu_rst_n = reset;
+assign hybridcpu_clk_fast = clk_fast;
+assign hybridcpu_clk_access = clk;
+
+assign hybridcpu_request_next = (hybridcpu_request | hybridcpu_request_reg) & ~hybridcpu_complete;
+assign hybridcpu_request_nocancel_next = hybridcpu_request | hybridcpu_request_reg;
+assign hybridcpu_readdata = {cpu_din[7:0],cpu_din[15:8]};
+assign hybridcpu_complete = chipready | ramready;
+assign hybrid_cpu_addr_p = {hybridcpu_address,1'd0};
+assign hybrid_cpu_dout_p = {hybridcpu_writedata[7:0],hybridcpu_writedata[15:8]};
+assign hybrid_wr_p = ~hybridcpu_write;
+assign hybrid_uds_p  = ~hybridcpu_byteenable[0];
+assign hybrid_lds_p  = ~hybridcpu_byteenable[1];
+assign hybrid_reset_out_p = 1'd1;// For now...
+assign hybrid_cpustate_p  = {hybridcpu_request_nocancel_next,~hybridcpu_request_nocancel_next| (hybridcpu_request_nocancel_next&hybridcpu_write)}; // 0: fetch code, 1: no memaccess, 2: read data, 3: write data
+assign hybrid_cacr_p     = 1; //TODO
+assign hybrid_vbr_p       = 0; //TODO
+assign hybrid_longword       = 0; //TODO
+
+// TG68k plumbing
 wire [15:0] cpu_dout_p;
 wire [31:0] cpu_addr_p;
 wire  [1:0] cpustate_p;
@@ -214,7 +296,7 @@ cpu_inst_p
   .nresetout(reset_out_p),
   .longword(longword),
   
-  .cpu(cpucfg),
+  .cpu(2'b11),
   .busstate(cpustate_p),		// 0: fetch code, 1: no memaccess, 2: read data, 3: write data
   .cacr_out(cacr_p),
   .vbr_out(vbr_p)
@@ -267,6 +349,8 @@ wire cpu_req = (cpustate != 1);
 wire cchip = turbochip_d & (!cpustate | dcache_d);
 wire ckick = turbokick_d & (!cpustate | dcache_d);
 
+wire cpucfg_fast = (cpucfg[0] | cpucfg[1]);
+
 reg turbochip_d;
 reg turbokick_d;
 reg dcache_d;
@@ -277,13 +361,13 @@ always @(posedge clk) begin
 		dcache_d    <= 0;
 	end
 	else if (~cpu_req) begin	// No mem access, so safe to switch chipram access mode
-		turbochip_d <= cachecfg[0] & cpucfg[1];
-		turbokick_d <= cachecfg[1] & cpucfg[1];
+		turbochip_d <= cachecfg[0] & cpucfg_fast;
+		turbokick_d <= cachecfg[1] & cpucfg_fast;
 		dcache_d    <= cachecfg[2];
 	end
 end
 
-wire cfg_z3 = fastramcfg[2] & cpucfg[1];
+wire cfg_z3 = fastramcfg[2] & cpucfg_fast;
 
 reg [3:0] autocfg_data;
 always @(*) begin

@@ -19,6 +19,8 @@
 //
 //============================================================================
 
+`define HYBRID_EMU
+
 module sys_top
 (
 	/////////// CLOCK //////////
@@ -121,8 +123,64 @@ module sys_top
 	output  [7:0] LED,
 
 	///////// USER IO ///////////
-	inout   [6:0] USER_IO
+	inout   [6:0] USER_IO,
+
+`ifdef HYBRID_EMU
+	// HPS PINs (these are not set when flashing fpga, but by preloader...
+	output wire [14:0] HPS_DDR3_A,
+	output wire [2:0] HPS_DDR3_BA,
+	output wire HPS_DDR3_CAS_N,
+	output wire HPS_DDR3_CKE,
+	output wire HPS_DDR3_CK_N,
+	output wire HPS_DDR3_CK_P,
+	output wire HPS_DDR3_CS_N,
+	output wire [3:0] HPS_DDR3_DM,
+	inout wire [31:0] HPS_DDR3_DQ,
+	inout wire [3:0] HPS_DDR3_DQS_N,
+	inout wire [3:0] HPS_DDR3_DQS_P,
+	output wire HPS_DDR3_ODT,
+	output wire HPS_DDR3_RAS_N,
+	output wire HPS_DDR3_RESET_N,
+	input wire HPS_DDR3_RZQ,
+	output wire HPS_DDR3_WE_N
+`endif	
 );
+
+`ifdef HYBRID_EMU
+	wire hps_h2f_reset_n;
+	hps_fpga_bridge u0 (
+		.clk_clk            (hybridcpu_clk_fast),        //    clk.clk
+		.hps_0_h2f_reset_reset(hps_h2f_reset_n),
+		.memory_mem_a       (HPS_DDR3_A),  // memory.mem_a
+		.memory_mem_ba      (HPS_DDR3_BA),  //       .mem_ba
+		.memory_mem_ck      (HPS_DDR3_CK_P),  //       .mem_ck
+		.memory_mem_ck_n    (HPS_DDR3_CK_N),  //       .mem_ck_n
+		.memory_mem_cke     (HPS_DDR3_CKE),  //       .mem_cke
+		.memory_mem_cs_n    (HPS_DDR3_CS_N),  //       .mem_cs_n
+		.memory_mem_ras_n   (HPS_DDR3_RAS_N),  //       .mem_ras_n
+		.memory_mem_cas_n   (HPS_DDR3_CAS_N),  //       .mem_cas_n
+		.memory_mem_we_n    (HPS_DDR3_WE_N),  //       .mem_we_n
+		.memory_mem_reset_n (HPS_DDR3_RESET_N), //       .mem_reset_n
+		.memory_mem_dq      (HPS_DDR3_DQ),  //       .mem_dq
+		.memory_mem_dqs     (HPS_DDR3_DQS_P),  //       .mem_dqs
+		.memory_mem_dqs_n   (HPS_DDR3_DQS_N),  //       .mem_dqs_n
+		.memory_mem_odt     (HPS_DDR3_ODT),  //       .mem_odt
+		.memory_mem_dm      (HPS_DDR3_DM),  //       .mem_dm
+		.memory_oct_rzqin   (HPS_DDR3_RZQ),  //       .oct_rzqin
+		.avalonirq_avalon_irq_n(hybridcpu_irq_n),
+		.avalonirq_avalon_sync_clk(hybridcpu_clk_access),
+		.avalonirq_avalon_reset_n(hybridcpu_rst_n),
+		.avalon1_hybridcpu_sync_clk    (hybridcpu_clk_access),
+		.avalon1_hybridcpu_address     (hybridcpu_address),   
+		.avalon1_hybridcpu_byteenable  (hybridcpu_byteenable),
+		.avalon1_hybridcpu_read        (hybridcpu_read),      
+		.avalon1_hybridcpu_readdata    (hybridcpu_readdata),  
+		.avalon1_hybridcpu_write       (hybridcpu_write),     
+		.avalon1_hybridcpu_writedata   (hybridcpu_writedata),
+		.avalon1_hybridcpu_complete   (hybridcpu_complete),
+		.avalon1_hybridcpu_request   (hybridcpu_request)    
+	);
+`endif	
 
 //////////////////////  Secondary SD  ///////////////////////////////////
 wire SD_CS, SD_CLK, SD_MOSI;
@@ -493,11 +551,11 @@ cyclonev_hps_interface_peripheral_spi_master spi
 	.ss_in_n(1)
 );
 
-wire [63:0] f2h_irq = {video_sync,HDMI_TX_VS};
+wire [63:0] f2h_irq = {hybridcpu_irq|~hybridcpu_rst_n,video_sync,HDMI_TX_VS};
 cyclonev_hps_interface_interrupts interrupts
 (
 	.irq(f2h_irq)
-);
+);//72-135   72=HDMI_TX_VS, 73=video_sync, 74=minimig
 
 ///////////////////////////  RESET  ///////////////////////////////////
 
@@ -533,6 +591,9 @@ sysmem_lite sysmem
 
 	//DE10-nano has no reset signal on GPIO, so core has to emulate cold reset button.
 	.reset_hps_cold_req(btn_r),
+
+	// Output hp2 reset signal, needed by qsys hps fpga rbidge
+	.hps_h2f_reset_n(hps_h2f_reset_n),
 
 	//64-bit DDR3 RAM access
 	.ram1_clk(ram_clk),
@@ -1522,6 +1583,22 @@ wire [13:0] fb_stride;
 	assign fb_stride = 0;
 `endif
 
+`ifdef HYBRID_EMU
+	wire        hybridcpu_rst_n;
+	wire [2:0]  hybridcpu_irq_n;
+	wire        hybridcpu_irq;
+	wire        hybridcpu_clk_fast;
+	wire        hybridcpu_clk_access;
+	wire [22:0] hybridcpu_address;
+	wire [1:0]  hybridcpu_byteenable;
+	wire        hybridcpu_read;
+	wire [15:0] hybridcpu_readdata;
+	wire        hybridcpu_complete;
+	wire        hybridcpu_request;
+	wire        hybridcpu_write;
+	wire [15:0] hybridcpu_writedata;
+`endif
+
 emu emu
 (
 	.CLK_50M(FPGA_CLK2_50),
@@ -1637,6 +1714,22 @@ emu emu
 	.UART_TXD(uart_rxd),
 	.UART_DTR(uart_dsr),
 	.UART_DSR(uart_dtr),
+
+`ifdef HYBRID_EMU
+	.hybridcpu_irq       (hybridcpu_irq),
+	.hybridcpu_irq_n       (hybridcpu_irq_n),
+	.hybridcpu_rst_n       (hybridcpu_rst_n),
+	.hybridcpu_clk_fast    (hybridcpu_clk_fast), 
+	.hybridcpu_clk_access  (hybridcpu_clk_access), 
+	.hybridcpu_address     (hybridcpu_address),
+	.hybridcpu_byteenable  (hybridcpu_byteenable),
+	.hybridcpu_read        (hybridcpu_read),     
+	.hybridcpu_readdata    (hybridcpu_readdata),
+	.hybridcpu_complete (hybridcpu_complete),
+	.hybridcpu_request (hybridcpu_request),
+	.hybridcpu_write       (hybridcpu_write),  
+	.hybridcpu_writedata   (hybridcpu_writedata),
+`endif
 
 	.USER_OUT(user_out),
 	.USER_IN(user_in)

@@ -1,0 +1,248 @@
+diff -ru hps_fpga_bridge/synthesis/hps_fpga_bridge.v hps_fpga_bridge/synthesis/hps_fpga_bridge.v
+--- hps_fpga_bridge/synthesis/hps_fpga_bridge.v	2021-04-10 23:03:50.312335538 +0200
++++ hps_fpga_bridge/synthesis/hps_fpga_bridge.v	2021-04-10 23:06:41.748196042 +0200
+@@ -4,6 +4,7 @@
+ 
+ `timescale 1 ps / 1 ps
+ module hps_fpga_bridge (
++		input wire hps_0_h2f_reset_reset,
+ 		output wire [22:0] avalon1_avalon_address,     // avalon1.avalon_address
+ 		output wire [1:0]  avalon1_avalon_byteenable,  //        .avalon_byteenable
+ 		output wire        avalon1_avalon_chipselect,  //        .avalon_chipselect
+@@ -31,7 +32,7 @@
+ 		input  wire        memory_oct_rzqin            //        .oct_rzqin
+ 	);
+ 
+-	wire         hps_0_h2f_reset_reset;                                     // hps_0:h2f_rst_n -> [rst_controller:reset_in0, rst_controller_001:reset_in0]
++	//wire         hps_0_h2f_reset_reset;                                     // hps_0:h2f_rst_n -> [rst_controller:reset_in0, rst_controller_001:reset_in0]
+ 	wire   [1:0] hps_0_h2f_axi_master_awburst;                              // hps_0:h2f_AWBURST -> mm_interconnect_0:hps_0_h2f_axi_master_awburst
+ 	wire   [3:0] hps_0_h2f_axi_master_arlen;                                // hps_0:h2f_ARLEN -> mm_interconnect_0:hps_0_h2f_axi_master_arlen
+ 	wire   [3:0] hps_0_h2f_axi_master_wstrb;                                // hps_0:h2f_WSTRB -> mm_interconnect_0:hps_0_h2f_axi_master_wstrb
+@@ -120,7 +121,7 @@
+ 		.mem_odt     (memory_mem_odt),               //               .mem_odt
+ 		.mem_dm      (memory_mem_dm),                //               .mem_dm
+ 		.oct_rzqin   (memory_oct_rzqin),             //               .oct_rzqin
+-		.h2f_rst_n   (hps_0_h2f_reset_reset),        //      h2f_reset.reset_n
++	//	.h2f_rst_n   (hps_0_h2f_reset_reset),        //      h2f_reset.reset_n
+ 		.h2f_axi_clk (clk_clk),                      //  h2f_axi_clock.clk
+ 		.h2f_AWID    (hps_0_h2f_axi_master_awid),    // h2f_axi_master.awid
+ 		.h2f_AWADDR  (hps_0_h2f_axi_master_awaddr),  //               .awaddr
+diff -ru hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0_fpga_interfaces.sv hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0_fpga_interfaces.sv
+--- hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0_fpga_interfaces.sv	2021-04-10 23:03:51.775343483 +0200
++++ hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0_fpga_interfaces.sv	2021-04-10 23:05:51.178955883 +0200
+@@ -13,9 +13,8 @@
+ 
+ module hps_fpga_bridge_hps_0_fpga_interfaces(
+ // h2f_reset
+-  output wire [1 - 1 : 0 ] h2f_rst_n
+ // h2f_axi_clock
+- ,input wire [1 - 1 : 0 ] h2f_axi_clk
++ input wire [1 - 1 : 0 ] h2f_axi_clk
+ // h2f_axi_master
+  ,output wire [12 - 1 : 0 ] h2f_AWID
+  ,output wire [30 - 1 : 0 ] h2f_AWADDR
+@@ -56,69 +55,69 @@
+ );
+ 
+ 
+-cyclonev_hps_interface_clocks_resets clocks_resets(
+- .f2h_pending_rst_ack({
+-    1'b1 // 0:0
+-  })
+-,.f2h_warm_rst_req_n({
+-    1'b1 // 0:0
+-  })
+-,.f2h_dbg_rst_req_n({
+-    1'b1 // 0:0
+-  })
+-,.h2f_rst_n({
+-    h2f_rst_n[0:0] // 0:0
+-  })
+-,.f2h_cold_rst_req_n({
+-    1'b1 // 0:0
+-  })
+-);
+-
+-
+-cyclonev_hps_interface_dbg_apb debug_apb(
+- .DBG_APB_DISABLE({
+-    1'b0 // 0:0
+-  })
+-,.P_CLK_EN({
+-    1'b0 // 0:0
+-  })
+-);
+-
+-
+-cyclonev_hps_interface_tpiu_trace tpiu(
+- .traceclk_ctl({
+-    1'b1 // 0:0
+-  })
+-);
+-
+-
+-cyclonev_hps_interface_boot_from_fpga boot_from_fpga(
+- .boot_from_fpga_ready({
+-    1'b0 // 0:0
+-  })
+-,.boot_from_fpga_on_failure({
+-    1'b0 // 0:0
+-  })
+-,.bsel_en({
+-    1'b0 // 0:0
+-  })
+-,.csel_en({
+-    1'b0 // 0:0
+-  })
+-,.csel({
+-    2'b01 // 1:0
+-  })
+-,.bsel({
+-    3'b001 // 2:0
+-  })
+-);
+-
+-
+-cyclonev_hps_interface_fpga2hps fpga2hps(
+- .port_size_config({
+-    2'b11 // 1:0
+-  })
+-);
++//cyclonev_hps_interface_clocks_resets clocks_resets(
++// .f2h_pending_rst_ack({
++//    1'b1 // 0:0
++//  })
++//,.f2h_warm_rst_req_n({
++//    1'b1 // 0:0
++//  })
++//,.f2h_dbg_rst_req_n({
++//    1'b1 // 0:0
++//  })
++//,.h2f_rst_n({
++//    h2f_rst_n[0:0] // 0:0
++//  })
++//,.f2h_cold_rst_req_n({
++//    1'b1 // 0:0
++//  })
++//);
++//
++//
++//cyclonev_hps_interface_dbg_apb debug_apb(
++// .DBG_APB_DISABLE({
++//    1'b0 // 0:0
++//  })
++//,.P_CLK_EN({
++//    1'b0 // 0:0
++//  })
++//);
++//
++//
++//cyclonev_hps_interface_tpiu_trace tpiu(
++// .traceclk_ctl({
++//    1'b1 // 0:0
++//  })
++//);
++//
++//
++//cyclonev_hps_interface_boot_from_fpga boot_from_fpga(
++// .boot_from_fpga_ready({
++//    1'b0 // 0:0
++//  })
++//,.boot_from_fpga_on_failure({
++//    1'b0 // 0:0
++//  })
++//,.bsel_en({
++//    1'b0 // 0:0
++//  })
++//,.csel_en({
++//    1'b0 // 0:0
++//  })
++//,.csel({
++//    2'b01 // 1:0
++//  })
++//,.bsel({
++//    3'b001 // 2:0
++//  })
++//);
++//
++//
++//cyclonev_hps_interface_fpga2hps fpga2hps(
++// .port_size_config({
++//    2'b11 // 1:0
++//  })
++//);
+ 
+ 
+ cyclonev_hps_interface_hps2fpga hps2fpga(
+@@ -239,29 +238,29 @@
+ );
+ 
+ 
+-cyclonev_hps_interface_fpga2sdram f2sdram(
+- .cfg_cport_rfifo_map({
+-    18'b000000000000000000 // 17:0
+-  })
+-,.cfg_axi_mm_select({
+-    6'b000000 // 5:0
+-  })
+-,.cfg_wfifo_cport_map({
+-    16'b0000000000000000 // 15:0
+-  })
+-,.cfg_cport_type({
+-    12'b000000000000 // 11:0
+-  })
+-,.cfg_rfifo_cport_map({
+-    16'b0000000000000000 // 15:0
+-  })
+-,.cfg_port_width({
+-    12'b000000000000 // 11:0
+-  })
+-,.cfg_cport_wfifo_map({
+-    18'b000000000000000000 // 17:0
+-  })
+-);
++//cyclonev_hps_interface_fpga2sdram f2sdram(
++// .cfg_cport_rfifo_map({
++//    18'b000000000000000000 // 17:0
++//  })
++//,.cfg_axi_mm_select({
++//    6'b000000 // 5:0
++//  })
++//,.cfg_wfifo_cport_map({
++//    16'b0000000000000000 // 15:0
++//  })
++//,.cfg_cport_type({
++//    12'b000000000000 // 11:0
++//  })
++//,.cfg_rfifo_cport_map({
++//    16'b0000000000000000 // 15:0
++//  })
++//,.cfg_port_width({
++//    12'b000000000000 // 11:0
++//  })
++//,.cfg_cport_wfifo_map({
++//    18'b000000000000000000 // 17:0
++//  })
++//);
+ 
+ endmodule
+ 
+diff -ru hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0.v hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0.v
+--- hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0.v	2021-04-10 23:03:51.560342316 +0200
++++ hps_fpga_bridge/synthesis/submodules/hps_fpga_bridge_hps_0.v	2021-04-10 23:07:03.794297601 +0200
+@@ -10,7 +10,6 @@
+ 		parameter F2S_Width = 0,
+ 		parameter S2F_Width = 1
+ 	) (
+-		output wire        h2f_rst_n,   //      h2f_reset.reset_n
+ 		input  wire        h2f_axi_clk, //  h2f_axi_clock.clk
+ 		output wire [11:0] h2f_AWID,    // h2f_axi_master.awid
+ 		output wire [29:0] h2f_AWADDR,  //               .awaddr
+@@ -93,7 +92,6 @@
+ 	endgenerate
+ 
+ 	hps_fpga_bridge_hps_0_fpga_interfaces fpga_interfaces (
+-		.h2f_rst_n   (h2f_rst_n),   //      h2f_reset.reset_n
+ 		.h2f_axi_clk (h2f_axi_clk), //  h2f_axi_clock.clk
+ 		.h2f_AWID    (h2f_AWID),    // h2f_axi_master.awid
+ 		.h2f_AWADDR  (h2f_AWADDR),  //               .awaddr

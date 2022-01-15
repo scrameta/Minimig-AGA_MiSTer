@@ -140,6 +140,22 @@ module emu
 	output        SDRAM2_nWE,
 `endif
 
+`ifdef HYBRID_EMU
+	output wire        hybridcpu_rst_n,
+	output wire        hybridcpu_irq,
+	output wire [2:0]  hybridcpu_irq_n,
+	output wire        hybridcpu_clk_fast,         
+	output wire        hybridcpu_clk_access,         
+	input wire [22:0] hybridcpu_address,     
+	input wire [1:0]  hybridcpu_byteenable,  
+	input wire        hybridcpu_read,        
+	output wire [15:0] hybridcpu_readdata,    
+	input wire        hybridcpu_request, 
+	output wire        hybridcpu_complete, 
+	input wire        hybridcpu_write,       
+	input wire [15:0] hybridcpu_writedata,   
+`endif
+
 	input         UART_CTS,
 	output        UART_RTS,
 	input         UART_RXD,
@@ -303,7 +319,7 @@ amiga_clk amiga_clk
 );
 
 
-wire cpu_type = cpucfg[1];
+wire cpu_type = cpucfg[1]|cpucfg[0];
 reg  cpu_ph1;
 reg  cpu_ph2;
 reg  ram_cs;
@@ -346,6 +362,8 @@ wire [31:0] cpu_nmi_addr;
 wire        cpu_rst;
 
 wire  [2:0] chip_ipl;
+reg  [2:0] chip_ipl_reg;
+reg  [2:0] chip_ipl_del_reg;
 wire        chip_dtack;
 wire        chip_as;
 wire        chip_uds;
@@ -371,6 +389,7 @@ cpu_wrapper cpu_wrapper
 	.reset_out    (cpu_nrst_out    ),
 
 	.clk          (clk_sys         ),
+	.clk_fast      (clk_114         ),
 	.ph1          (cpu_ph1         ),
 	.ph2          (cpu_ph2         ),
 
@@ -392,6 +411,18 @@ cpu_wrapper cpu_wrapper
 	.fastchip_selack (fastchip_selack ),
 	.fastchip_ready  (fastchip_ready  ),
 	.fastchip_lw     (fastchip_lw     ),
+
+	.hybridcpu_rst_n    (hybridcpu_rst_n), 
+	.hybridcpu_clk_fast    (hybridcpu_clk_fast), 
+	.hybridcpu_clk_access  (hybridcpu_clk_access), 
+	.hybridcpu_address     (hybridcpu_address),
+	.hybridcpu_byteenable  (hybridcpu_byteenable),
+	.hybridcpu_read        (hybridcpu_read),     
+	.hybridcpu_readdata    (hybridcpu_readdata),
+	.hybridcpu_request (hybridcpu_request),
+	.hybridcpu_complete (hybridcpu_complete),
+	.hybridcpu_write       (hybridcpu_write),  
+	.hybridcpu_writedata   (hybridcpu_writedata),
 
 	.cpucfg       (cpucfg          ),
 	.cachecfg     (cachecfg        ),
@@ -563,6 +594,15 @@ assign uart_cts = ~hps_mpu & UART_CTS;
 assign uart_dsr = ~hps_mpu & UART_DSR;
 assign uart_rx  = uart_mode ? UART_RXD : midi_rx;
 assign UART_TXD = (hps_mpu & mt32_use) | uart_tx;
+
+always @ (posedge hybridcpu_clk_access) begin
+  chip_ipl_reg <= chip_ipl;
+  chip_ipl_del_reg <= chip_ipl_reg;
+end
+
+//assign hybridcpu_irq = (chip_ipl_del_reg[2]^chip_ipl_reg[2]) | (chip_ipl_del_reg[1]^chip_ipl_reg[1]) | (chip_ipl_del_reg[0]^chip_ipl_reg[0]);
+assign hybridcpu_irq =| (chip_ipl_del_reg^chip_ipl_reg);
+assign hybridcpu_irq_n = chip_ipl_reg[2:0];
 
 ///////////////////////////////////////////////////////////////////////
 

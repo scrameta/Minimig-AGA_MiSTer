@@ -8,6 +8,8 @@ module sysmem_lite
 	input          reset_hps_warm_req,
 	input          reset_core_req,
 
+	output         hps_h2f_reset_n,
+
 	input          ram1_clk,
 	input   [28:0] ram1_address,
 	input    [7:0] ram1_burstcount,
@@ -222,8 +224,6 @@ sysmem_HPS_fpga_interfaces fpga_interfaces (
 	.f2h_sdram2_WRITE         (f2h_ram2_write)
 );
 
-wire hps_h2f_reset_n;
-
 reg init_reset_n = 0;
 always @(posedge clock) begin
 	integer timeout = 0;
@@ -395,11 +395,11 @@ cyclonev_hps_interface_fpga2hps fpga2hps(
 );
 
 
-cyclonev_hps_interface_hps2fpga hps2fpga(
- .port_size_config({
-    2'b11 // 1:0
-  })
-);
+//cyclonev_hps_interface_hps2fpga hps2fpga(
+// .port_size_config({
+//    2'b11 // 1:0
+//  })
+//);
 
 
 cyclonev_hps_interface_fpga2sdram f2sdram(
