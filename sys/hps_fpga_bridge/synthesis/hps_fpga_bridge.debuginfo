@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <EnsembleReport name="hps_fpga_bridge" kind="system" version="20.1" fabric="QSYS">
  <!-- Format version 20.1 720 (Future versions may contain additional information.) -->
- <!-- 2021.04.14.22:02:42 -->
+ <!-- 2022.01.15.10:43:10 -->
  <!-- A collection of modules and connections -->
  <parameter name="clockCrossingAdapter">
   <type>com.altera.sopcmodel.ensemble.EClockAdapter</type>
@@ -53,7 +53,7 @@
  </parameter>
  <parameter name="generationId">
   <type>int</type>
-  <value>1618430525</value>
+  <value>1642239754</value>
   <derived>false</derived>
   <enabled>true</enabled>
   <visible>true</visible>
@@ -43426,5 +43426,5 @@ parameters are a RESULT of the module parameters. -->
   <version>20.1</version>
  </plugin>
  <reportVersion>20.1 720</reportVersion>
- <uniqueIdentifier>F44D30F4F5CE00000178D1FA5976</uniqueIdentifier>
+ <uniqueIdentifier>0242355DED3F0000017E5D1E56C4</uniqueIdentifier>
 </EnsembleReport>
