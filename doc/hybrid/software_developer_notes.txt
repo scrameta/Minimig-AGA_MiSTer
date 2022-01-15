@@ -1,0 +1,54 @@
+Github projects:
+https://github.com/scrameta/MiSTer_Hybrid_Support (release scripts and binaries)
+https://github.com/scrameta/Minimig-AGA_MiSTer_Hybrid (core)
+https://github.com/scrameta/Main_MiSTer_Hybrid (modifications to start hybrid emulation)
+https://github.com/scrameta/qemu_MiSTer_Hybrid
+https://github.com/scrameta/Musashi_MiSTer_Hybrid
+https://github.com/scrameta/MiSTer_Hybrid_Kernel_Module
+
+Overview of hardware
+There is an HPS-FPGA bridge inside the FPGA. This measn that on the FPGA we can build some custom logic and make it available on the Arm cpu bus. This custom logic is implemented as an 'avalon slave'. In the modified minimig core there are two of these slaves, which can be mapped into the arm memory space:
+i) arm_avalon: 16MB window into the amiga memory, including hardware regions. 16-bit wide at present, though byte and longword accesses can be transparently done. This region is only active when 68Arm is selected in the core. 
+ii)arm_irq_avalon: 1 byte window to cpu irq flags. Bits 0-2: IPL, bit 3: reset
+
+There is also an irq bridge, allowing FPGA logic to raise IRQs on the ARM. This avoids having to poll arm_irq_avalon. There is an interrupt on every ipl change or on system reset.
+
+Finally there is some ram that minimig uses. The board has 1GB of ram, of which 512MB is exposed to linux and the other 512MB isn't. The second 512MB is exposed to both Linux and to the FPGA. In it we have the framebuffer for the scalar and the 384MB of fast ram.
+
+Memory regions
+hps bridge base : 0xc0000000
+arm_avalon      : hps bridge base + 0  (16MB big)
+	Within this its the amiga memory map - chip ram and chipset
+	So e.g. rom starts at 0xf00000 and chip ram at 0x000000 (well, rom initially on cold boot etc)
+arm_irq_avalon  : hps bridge base + 0x1000000 (1 byte)
+rtg base        : 0x27000000 (8MB)
+fast ram base   : 0x28000000 (384MB)
+
+Kernel support
+We need a kernel module to handle the irq and expose it as an ioctl.
+We also need a kernel module to enable caching for the rtg and fast ram. I think, I couldn't find any user space apis.
+These are both handled by the minimigirq.ko module.
+I'm not a kernel dev so made the simplest I could, using debugfs!
+Note that it needs an entry in the device tree for its configuration.
+
+For mmap use there are a few devices that can be used just like /dev/mem, to specify the caching mode.
+/sys/kernel/debug/minimig_irq/mmap_writecombined
+/sys/kernel/debug/minimig_irq/mmap_noncached
+/sys/kernel/debug/minimig_irq/mmap_cached
+/sys/kernel/debug/minimig_irq/mmap_dmacoherent
+I use mmap_cached for fast ram and everything else /dev/mem (or mmap_uncached)
+
+The irq ioctl can be made on
+/sys/kernel/debug/minimig_irq/ioctl_dev
+For the define to use it:
+#include <linux/ioctl.h>
+#include <linux/types.h>
+#define MINIMIG_IOCTL_BASE 'M'
+#define MINIMIG_IOC_WAIT_IRQ     _IOR(MINIMIG_IOCTL_BASE, 0, int)
+
+JIT issues
+The amiga remaps the rom initially 0x000000 then maps it out later in boot. Anything compiled needs to be invalidated. I did this by trapping cia access.
+
+QEMU issues
+It is written with the assumption of a modern OS, which has code and data in different pages by design. The Amiga OS does not do this, so we need to patch it. I did this by patching AllocMem to return 4k aligned and using StackAttack to relocate the stack.
+

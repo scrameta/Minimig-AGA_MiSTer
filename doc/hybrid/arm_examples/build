@@ -1,0 +1,4 @@
+arm-linux-gnueabihf-gcc bustest.c mem_init.c -O3 -o bustest
+arm-linux-gnueabihf-gcc irqtest.c mem_init.c -O0 -g -o irqtest -lpthread
+arm-linux-gnueabihf-gcc rtgtest.c mem_init.c -O0 -g -o rtgtest 
+scp rtgtest bustest irqtest root@192.168.0.25:/media/fat/

@@ -1,0 +1,6 @@
+See software_developer_notes.txt for an overview first.
+
+The avalon bridges are exposed via qsys. The hps_fpga_bridge.qsys lives in sys. This puts the two avalon interfaces onto the HPS bus. Since MiSTer has used non-public interface ip from qsys, parts of the output need patching after creating verilog. This is done using hps_fpga_bridge.patch. Then I just add the synthesis .qip to the project instead.
+
+The cpu_wrapper has been modified to connect the avalon interface as a cpu. So you can now select FX68 (0), TG68K 020 (1) and Arm (2). 
+
