@@ -16,7 +16,7 @@ The minimig-MiSTer variant in this repository has been upgraded with [AGA chipse
 * chipRAM : 0.5MB - 2.0MB
 * slowRAM : 0.0MB - 1.5MB
 * fastRAM : 0.0MB - 384MB
-* CPU core : 68000, 68020
+* CPU core : 68000, 68020, 68Arm (qemu or musashi etc)
 * kickstart : 1.2 - 3.1 (256kB, 512kB & 1MB kickstart ROMs currently supported)
 * HRTmon with custom registers mirror
 * floppy disks : 1-4 floppies (supports ADF floppy image format), with normal & turbo speeds
@@ -43,6 +43,16 @@ Adjustment is initiated from OSD menu. Keyboard control:
 * Esc - cancel and finish.
 
 Positions are saved in the configuration file. Up to 64 different resolutions can be adjusted.
+
+### Hybrid CPU
+
+You need a patched CPU emulator and a patched Mister binary to use this.
+There are some all in one setups here in the .zst files:
+http://www.64kib.com/mister_hybrid_files/
+Extract the .zst on your own box, then the .tar on the mister when in /media/fat
+
+Main discussion thread:
+https://misterfpga.org/viewtopic.php?f=4&t=2397
 
 ### Shared folder
 
@@ -150,6 +160,8 @@ Copyright © 2011 - 2016 Rok Krajnc (rok.krajnc@gmail.com)
 Copyright © 2005 - 2015 Dennis van Weeren, Jakub Bednarski, Sascha Boing, A.M. Robinson, Tobias Gubener, Till Harbaum
 
 Copyright © 2017 - 2020 Sorgelig (mister.devel@gmail.com)
+
+Copyright © 2021 Mark Watson (scrameta@gmail.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
