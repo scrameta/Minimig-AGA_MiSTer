@@ -170,7 +170,7 @@ always @* begin
 		fastchip_sel = cpu_req & !hybrid_cpu_addr_p[31:24];
 		fastchip_lw  = hybrid_longword;
 	end
-	else if(cpucfg==2'b01) begin
+	else if(cpucfg==2'b11) begin
 		// TG68K
 		cpu_dout     = cpu_dout_p;
 		cpu_addr     = cpu_addr_p;
