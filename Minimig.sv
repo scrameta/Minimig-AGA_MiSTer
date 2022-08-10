@@ -14,7 +14,7 @@ module emu
 	input         RESET,
 
 	//Must be passed to hps_io module
-	inout  [47:0] HPS_BUS,
+	inout  [48:0] HPS_BUS,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        CLK_VIDEO,
@@ -185,7 +185,7 @@ localparam CONF_STR = {
 	"J,Red(Fire),Blue,Yellow,Green,RT,LT,Pause;",
 	"jn,A,B,X,Y,R,L,Start;",
 	"jp,B,A,X,Y,R,L,Start;",
-	"- ;",
+	"-;",
 	"I,",
 	"MT32-pi: SoundFont #0,",
 	"MT32-pi: SoundFont #1,",
@@ -206,6 +206,8 @@ wire [15:0] JOY0;
 wire [15:0] JOY1;
 wire [15:0] JOY2;
 wire [15:0] JOY3;
+wire [15:0] JOYA0;
+wire [15:0] JOYA1;
 wire  [7:0] kbd_mouse_data;
 wire        kbd_mouse_level;
 wire  [1:0] kbd_mouse_type;
@@ -231,7 +233,7 @@ wire  [7:0] uart_mode;
 hps_io #(.CONF_STR(CONF_STR), .CONF_STR_BRAM(0)) hps_io
 (
 	.clk_sys(clk_sys),
-	.HPS_BUS({HPS_BUS[47:42],ce_pix,HPS_BUS[40:0]}),
+	.HPS_BUS({HPS_BUS[48:42],ce_pix,HPS_BUS[40:0]}),
 
 	.status(status),
 	.status_menumask({mt32_cfg,mt32_available}),
@@ -242,7 +244,9 @@ hps_io #(.CONF_STR(CONF_STR), .CONF_STR_BRAM(0)) hps_io
 	.joystick_1(JOY1),
 	.joystick_2(JOY2),
 	.joystick_3(JOY3),
-
+	.joystick_l_analog_0(JOYA0),
+	.joystick_l_analog_1(JOYA1),
+	
 	.ioctl_wait(io_wait),
 
 	.buttons(buttons),
@@ -684,6 +688,8 @@ minimig minimig
 	._joy2        (~JOY1            ), // joystick 2 [fire4,fire3,fire2,fire,up,down,left,right] (default joystick port)
 	._joy3        (~JOY2            ), // joystick 1 [fire4,fire3,fire2,fire,up,down,left,right]
 	._joy4        (~JOY3            ), // joystick 2 [fire4,fire3,fire2,fire,up,down,left,right]
+	.joya1        (JOYA0            ),
+	.joya2        (JOYA1            ),
 	.mouse_btn    (mouse_buttons    ), // mouse buttons
 	.kbd_mouse_data (kbd_mouse_data ), // mouse direction data, keycodes
 	.kbd_mouse_type (kbd_mouse_type ), // type of data
