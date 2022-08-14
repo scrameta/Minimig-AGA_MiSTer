@@ -146,14 +146,17 @@ module emu
 	output wire [2:0]  hybridcpu_irq_n,
 	output wire        hybridcpu_clk_fast,         
 	output wire        hybridcpu_clk_access,         
-	input wire [22:0] hybridcpu_address,     
-	input wire [1:0]  hybridcpu_byteenable,  
-	input wire        hybridcpu_read,        
+	input wire [22:0]  hybridcpu_address,     
+	input wire [1:0]   hybridcpu_byteenable,  
+	input wire         hybridcpu_read,        
 	output wire [15:0] hybridcpu_readdata,    
-	input wire        hybridcpu_request, 
+	input wire         hybridcpu_request, 
+	input wire         hybridcpu_longword, 
 	output wire        hybridcpu_complete, 
-	input wire        hybridcpu_write,       
-	input wire [15:0] hybridcpu_writedata,   
+	input wire         hybridcpu_write,       
+	input wire [15:0]  hybridcpu_writedata,   
+	input wire [3:0]   hybridcpu_cacr,   
+	input wire [31:0]  hybridcpu_vbr,   
 `endif
 
 	input         UART_CTS,
@@ -275,15 +278,16 @@ assign LED_DISK     = {1'b0, ide_fast ? ide_f_led : ide_c_led};
 
 assign VGA_SCALER   = FB_EN;
 
-wire clk_57, clk_114;
+wire clk_57, clk_114, clk_sys_x6;
 wire clk_sys;
 wire locked;
 
 pll pll
 (
 	.refclk(CLK_50M),
-	.outclk_0(clk_114),
+	.outclk_0(clk_114),	
 	.outclk_1(clk_sys),
+	.outclk_2(clk_sys_x6),
 	.locked(locked)
 );
 
@@ -393,7 +397,7 @@ cpu_wrapper cpu_wrapper
 	.reset_out    (cpu_nrst_out    ),
 
 	.clk          (clk_sys         ),
-	.clk_fast      (clk_114         ),
+	.clk_fast      (clk_sys_x6         ),
 	.ph1          (cpu_ph1         ),
 	.ph2          (cpu_ph2         ),
 
@@ -416,17 +420,20 @@ cpu_wrapper cpu_wrapper
 	.fastchip_ready  (fastchip_ready  ),
 	.fastchip_lw     (fastchip_lw     ),
 
-	.hybridcpu_rst_n    (hybridcpu_rst_n), 
+	.hybridcpu_rst_n       (hybridcpu_rst_n), 
 	.hybridcpu_clk_fast    (hybridcpu_clk_fast), 
 	.hybridcpu_clk_access  (hybridcpu_clk_access), 
 	.hybridcpu_address     (hybridcpu_address),
 	.hybridcpu_byteenable  (hybridcpu_byteenable),
 	.hybridcpu_read        (hybridcpu_read),     
 	.hybridcpu_readdata    (hybridcpu_readdata),
-	.hybridcpu_request (hybridcpu_request),
-	.hybridcpu_complete (hybridcpu_complete),
+	.hybridcpu_request     (hybridcpu_request),
+	.hybridcpu_longword    (hybridcpu_longword),
+	.hybridcpu_complete    (hybridcpu_complete),
 	.hybridcpu_write       (hybridcpu_write),  
 	.hybridcpu_writedata   (hybridcpu_writedata),
+	.hybridcpu_cacr        (hybridcpu_cacr),
+	.hybridcpu_vbr         (hybridcpu_vbr),
 
 	.cpucfg       (cpucfg          ),
 	.cachecfg     (cachecfg        ),

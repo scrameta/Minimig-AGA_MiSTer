@@ -24,13 +24,13 @@ PORT
 	RESET_N : IN STD_LOGIC;
 	
 	-- avalon signals
-	CHIPSELECT : IN STD_LOGIC;
-	ADDRESS : IN STD_LOGIC_VECTOR(22 downto 0);
+	ADDRESS : IN STD_LOGIC_VECTOR(21 downto 0);
 	READ: IN STD_LOGIC;
-	READDATA : OUT STD_LOGIC_VECTOR(15 downto 0);
+	READDATA : OUT STD_LOGIC_VECTOR(31 downto 0);
+	READDATAVALID : OUT STD_LOGIC;
 	WRITE : IN STD_LOGIC;
-	WRITEDATA : IN STD_LOGIC_VECTOR(15 downto 0);
-	BYTEENABLE : IN STD_LOGIC_VECTOR(1 downto 0);
+	WRITEDATA : IN STD_LOGIC_VECTOR(31 downto 0);
+	BYTEENABLE : IN STD_LOGIC_VECTOR(3 downto 0);
 	WAITREQUEST : OUT STD_LOGIC;
 	
 
@@ -43,6 +43,7 @@ PORT
 	HYBRIDCPU_BYTEENABLE : OUT STD_LOGIC_VECTOR(1 downto 0);
 	HYBRIDCPU_COMPLETE : IN STD_LOGIC;
 	HYBRIDCPU_REQUEST : OUT STD_LOGIC;
+	HYBRIDCPU_LONGWORD : OUT STD_LOGIC; 
 
 	-- expose a slow clock too, aligned with CLK
 	HYBRIDCPU_SYNC_CLK : IN STD_LOGIC
@@ -50,106 +51,276 @@ PORT
 END arm_avalon;
 
 ARCHITECTURE vhdl OF arm_avalon IS
-	signal READDATA_REG : STD_LOGIC_VECTOR(15 downto 0);
-	signal COMPLETE_REG : STD_LOGIC;
+	signal hps_readvalid_reg : std_logic;
+	signal hps_readvalid_next : std_logic;
 
-	signal HYBRIDCPU_REQUEST_NEXT : STD_LOGIC;
-	signal HYBRIDCPU_REQUEST_REG : STD_LOGIC;
-	signal HYBRIDCPU_ADDRESS_REG : STD_LOGIC_VECTOR(22 downto 0);
-	signal HYBRIDCPU_READ_REG: STD_LOGIC;
-	signal HYBRIDCPU_READDATA_REG : STD_LOGIC_VECTOR(15 downto 0);
-	signal HYBRIDCPU_WRITE_REG : STD_LOGIC;
-	signal HYBRIDCPU_WRITEDATA_REG : STD_LOGIC_VECTOR(15 downto 0);
-	signal HYBRIDCPU_BYTEENABLE_REG : STD_LOGIC_VECTOR(1 downto 0);
+	signal SYS_STATE_REG : STD_LOGIC_VECTOR(1 downto 0);
+	signal SYS_STATE_NEXT : STD_LOGIC_VECTOR(1 downto 0);
+	constant SYS_STATE_WAIT_REQUEST : STD_LOGIC_VECTOR(1 downto 0) := "00";
+	constant SYS_STATE_WAIT_COMPLETE : STD_LOGIC_VECTOR(1 downto 0) := "01";
+	constant SYS_STATE_WAIT_COMPLETE1 : STD_LOGIC_VECTOR(1 downto 0) := "10";
+	constant SYS_STATE_WAIT_COMPLETE2 : STD_LOGIC_VECTOR(1 downto 0) := "11";
 
-	signal STATE_REG : STD_LOGIC_VECTOR(1 downto 0);
-	signal STATE_NEXT : STD_LOGIC_VECTOR(1 downto 0);
-	constant STATE_INIT : STD_LOGIC_VECTOR(1 downto 0) := "00";
-	constant STATE_WAIT_HYBRIDCPU_SEEN : STD_LOGIC_VECTOR(1 downto 0) := "01";
-	constant STATE_WAIT_HYBRIDCPU_COMPLETE : STD_LOGIC_VECTOR(1 downto 0) := "10";
+	signal active_word : std_logic;
+	signal read_word : std_logic_vector(1 downto 0);
 
-	signal WATCHDOG_REG : UNSIGNED(15 downto 0);
-	signal WATCHDOG_NEXT : UNSIGNED(15 downto 0);
+	signal to_hps_read : std_logic;
+	signal to_hps_empty : std_logic;
+	signal to_hps_write : std_logic;
+
+	signal to_hps_readdata : std_logic_vector(31 downto 0);
+	signal to_hps_readdata_next : std_logic_vector(31 downto 0);
+	signal to_hps_readdata_reg : std_logic_vector(31 downto 0);
+
+	signal from_hps_readack : std_logic;
+	signal from_hps_empty : std_logic;
+	signal from_hps_write : std_logic;
+	signal from_hps_read : std_logic;
+	signal from_hps_byteenable : std_logic_vector(3 downto 0);
+	signal from_hps_writedata : std_logic_vector(31 downto 0);
+	signal from_hps_writereq : std_logic;
+	signal from_hps_full : std_logic;
+
+	COMPONENT fifo_from_hps IS
+	PORT
+	(
+		data		: IN STD_LOGIC_VECTOR (59 DOWNTO 0);
+		rdclk		: IN STD_LOGIC ;
+		rdreq		: IN STD_LOGIC ;
+		wrclk		: IN STD_LOGIC ;
+		wrreq		: IN STD_LOGIC ;
+		q		: OUT STD_LOGIC_VECTOR (59 DOWNTO 0);
+		rdempty		: OUT STD_LOGIC ;
+		wrfull		: OUT STD_LOGIC 
+	);
+	END COMPONENT;
+
+	COMPONENT fifo_to_hps IS
+		PORT
+		(
+			data		: IN STD_LOGIC_VECTOR (31 DOWNTO 0);
+			rdclk		: IN STD_LOGIC ;
+			rdreq		: IN STD_LOGIC ;
+			wrclk		: IN STD_LOGIC ;
+			wrreq		: IN STD_LOGIC ;
+			q		: OUT STD_LOGIC_VECTOR (31 DOWNTO 0);
+			rdempty		: OUT STD_LOGIC ;
+			wrfull		: OUT STD_LOGIC 
+		);
+	END COMPONENT;
+
 BEGIN
-	process(hybridcpu_sync_clk,reset_n)
-	begin
-		if (reset_n='0') then
-			COMPLETE_REG <= '0';
-			READDATA_REG <= (others=>'0');
-			--IRQ_N <= HYBRIDCPU_IRQ_N;
-		
-			HYBRIDCPU_REQUEST_REG <= '0';
-			HYBRIDCPU_ADDRESS_REG <= (others=>'0');
-			HYBRIDCPU_READ_REG <= '0';
-			HYBRIDCPU_WRITE_REG <= '0';
-			HYBRIDCPU_WRITEDATA_REG <= (others=>'0');
-			HYBRIDCPU_BYTEENABLE_REG <= (others=>'0');
-		elsif (hybridcpu_sync_clk'event and hybridcpu_sync_clk='1') then
-			COMPLETE_REG <= HYBRIDCPU_COMPLETE;
-			READDATA_REG <= HYBRIDCPU_READDATA;
-			--IRQ_N <= HYBRIDCPU_IRQ_N;
-		
-			HYBRIDCPU_REQUEST_REG <= HYBRIDCPU_REQUEST_NEXT;
-			HYBRIDCPU_ADDRESS_REG <= ADDRESS;
-			HYBRIDCPU_READ_REG <= READ;
-			HYBRIDCPU_WRITE_REG <= WRITE;
-			HYBRIDCPU_WRITEDATA_REG <= WRITEDATA;
-			HYBRIDCPU_BYTEENABLE_REG <= BYTEENABLE;
-		end if;
-	end process;
+	to_hps : fifo_to_hps
+	port map
+	(
+		rdclk=>clk,
+		rdreq=>to_hps_read,
+		rdempty=>to_hps_empty,
+		q=>READDATA,
 
+		wrclk=>hybridcpu_sync_clk,
+		data =>to_hps_readdata,
+		wrreq=>to_hps_write,
+		wrfull=>open
+	);
 
+	from_hps : fifo_from_hps
+	port map
+	(
+		rdclk=>hybridcpu_sync_clk,
+		rdreq=>from_hps_readack,
+		rdempty=>from_hps_empty,
+		q(59)=>from_hps_write,
+		q(58)=>from_hps_read,
+		q(57 downto 54)=>from_hps_byteenable,
+		q(53 downto 32)=>HYBRIDCPU_ADDRESS(22 downto 1), -- 0 needs setting...
+		q(31 downto 0)=>from_hps_writedata,
+
+		wrclk=>clk,
+		data(59) => WRITE,
+		data(58) => READ, 
+		data(57 downto 54) => BYTEENABLE, 
+		data(53 downto 32) => ADDRESS, 
+		data(31 downto 0) => WRITEDATA, 
+
+		wrreq=>from_hps_writereq,
+		wrfull=>from_hps_full
+	);
+
+	-------------------
+	-- HPS side
 	process(clk,reset_n)
 	begin
 		if (reset_n='0') then
-			state_reg <= state_init;
-			watchdog_reg <= (others=>'0');
+			hps_readvalid_reg <= '0';
 		elsif (clk'event and clk='1') then
-			state_reg <= state_next;
-			watchdog_reg <= watchdog_next;
+			hps_readvalid_reg <= hps_readvalid_next;
 		end if;
 	end process;
 
-	process(state_reg, chipselect, COMPLETE_REG, hybridcpu_request_reg, watchdog_reg) is
+	process(hps_readvalid_reg, from_hps_full, to_hps_empty, READ, WRITE) is
 	begin
-		state_next <= state_reg;
-		hybridcpu_request_next <= hybridcpu_request_reg;
-		waitrequest <= '0';
-		watchdog_next <= watchdog_reg+1;
-		case state_reg is
-			when STATE_INIT =>
-				watchdog_next <= (others=>'0');
-				if (CHIPSELECT='1') then
-					state_next <= state_wait_hybridcpu_seen;
-					hybridcpu_request_next <= '1';
-					waitrequest <= '1';
+		hps_readvalid_next <= hps_readvalid_reg;
+		waitrequest <= from_hps_full;
+
+		READDATAVALID <= hps_readvalid_reg;
+
+		from_hps_writereq <= '0';
+		to_hps_read <= '0';
+
+		from_hps_writereq <= READ or WRITE;
+
+		hps_readvalid_next <= not(to_hps_empty);
+		to_hps_read<=not(to_hps_empty);
+	end process;
+
+	-------------------
+	-- sys side
+	process(HYBRIDCPU_SYNC_CLK,reset_n)
+	begin
+		if (reset_n='0') then
+			sys_state_reg <= SYS_STATE_WAIT_REQUEST;
+			to_hps_readdata_reg <= (others=>'0');
+		elsif (HYBRIDCPU_SYNC_CLK'event and HYBRIDCPU_SYNC_CLK='1') then
+			sys_state_reg <= sys_state_next;
+			to_hps_readdata_reg <= TO_HPS_READDATA_NEXT;
+		end if;
+	end process;
+
+	---- I need to handle reads and populate these
+	--to_hps_readdata, --DONE
+	--to_hps_write, -- DONE
+
+	---- I need to handle these
+	--from_hps_readack, -- DONE
+	--from_hps_empty, -- DONE
+	--from_hps_byteenable, --DONE
+	--from_hps_writedata, -- DONE
+
+	---- I need to send this to minimig
+	--HYBRIDCPU_ADDRESS(0), -- DONE -- 0 needs setting...
+	--HYBRIDCPU_BYTEENABLE -- DONE
+	--HYBRIDCPU_REQUEST --DONE
+	--HYBRIDCPU_WRITEDATA -- DONE
+	--HYBRIDCPU_LONGWORD --DONE
+
+	---- + this from minimig
+	--HYBRIDCPU_COMPLETE; --DONE
+	--HYBRIDCPU_READDATA --DONE
+
+
+	HYBRIDCPU_WRITE <= from_hps_write;
+	HYBRIDCPU_READ <= from_hps_read;
+
+	process(sys_state_reg,
+		from_hps_byteenable, from_hps_read, from_hps_empty,
+		HYBRIDCPU_COMPLETE
+		) is
+		variable word : std_logic_vector(1 downto 0);
+		variable longword : std_logic;
+	begin
+		sys_state_next <= sys_state_reg;
+
+		word(0) := from_hps_byteenable(0) or from_hps_byteenable(1);
+		word(1) := from_hps_byteenable(2) or from_hps_byteenable(3);
+
+		case word is
+		when "01" => 
+			active_word <= '0';
+			read_word <= "11";
+			longword:='0';
+		when "10" => 
+			active_word <= '1';
+			read_word <= "11";
+			longword:='0';
+		when others => 
+			active_word <= '0';
+			read_word <= "01";
+			longword:='1';
+		end case;
+
+		from_hps_readack<='0';
+		to_hps_write<='0';
+
+		HYBRIDCPU_LONGWORD <= '0'; 
+		HYBRIDCPU_REQUEST <= '0'; 
+
+		case sys_state_reg is
+			when SYS_STATE_WAIT_REQUEST =>
+				if (from_hps_empty='0') then
+					HYBRIDCPU_REQUEST <= '1'; 
+					HYBRIDCPU_LONGWORD <= longword;
+					if (HYBRIDCPU_COMPLETE='1') then
+						to_hps_write<=from_hps_read and not(longword);
+						sys_state_next <= SYS_STATE_WAIT_REQUEST;
+						if (longword='1') then
+							sys_state_next <= SYS_STATE_WAIT_COMPLETE2;
+						else
+							from_hps_readack<='1';
+						end if;
+					else
+						if (longword='0') then
+							sys_state_next <= SYS_STATE_WAIT_COMPLETE;
+						else
+							sys_state_next <= SYS_STATE_WAIT_COMPLETE1;
+						end if;
+					end if;
 				end if;
-			when STATE_WAIT_HYBRIDCPU_SEEN =>
-				waitrequest <= '1';
-				hybridcpu_request_next <= '1';
-				if (hybridcpu_request_reg='1') then
-					state_next <= state_wait_hybridcpu_complete;
-					hybridcpu_request_next <= '0';
+			when SYS_STATE_WAIT_COMPLETE =>
+				HYBRIDCPU_REQUEST <= '1'; 
+				if (HYBRIDCPU_COMPLETE='1') then
+					to_hps_write<=from_hps_read;
+					sys_state_next <= SYS_STATE_WAIT_REQUEST;
+					from_hps_readack<='1';
 				end if;
-			when STATE_WAIT_HYBRIDCPU_COMPLETE =>
-				waitrequest <= '1';
-				hybridcpu_request_next <= '0';
-				if (complete_reg='1' or and_reduce(std_logic_vector(watchdog_reg))='1') then
-					waitrequest <= '0';
-					state_next <= state_init;
+			when SYS_STATE_WAIT_COMPLETE1 =>
+				HYBRIDCPU_REQUEST <= '1'; 
+				HYBRIDCPU_LONGWORD <= '1'; 
+				if (HYBRIDCPU_COMPLETE='1') then
+					sys_state_next <= SYS_STATE_WAIT_COMPLETE2;
 				end if;
+			when SYS_STATE_WAIT_COMPLETE2 =>
+				HYBRIDCPU_REQUEST <= '1'; 
+				read_word <= "10";
+				active_word <= '1';
+				if (HYBRIDCPU_COMPLETE='1') then
+					to_hps_write<=from_hps_read;
+					sys_state_next <= SYS_STATE_WAIT_REQUEST;
+					from_hps_readack<='1';
+				end if;
+
 			when others =>
-				state_next <= state_init;
+				sys_state_next <= SYS_STATE_WAIT_REQUEST;
 		end case;
 	end process;
 
-	READDATA <= READDATA_REG;
+	process(active_word,ADDRESS)
+	begin
+		HYBRIDCPU_ADDRESS(0) <= active_word;
+	end process;
 
-	HYBRIDCPU_REQUEST <= HYBRIDCPU_REQUEST_REG;
+	process(active_word,from_hps_writedata,from_hps_byteenable)
+	begin
+		if active_word='0' then
+			HYBRIDCPU_WRITEDATA <= from_hps_writedata(15 downto 0);
+			HYBRIDCPU_BYTEENABLE <= from_hps_byteenable(1 downto 0);
+		else
+			HYBRIDCPU_WRITEDATA <= from_hps_writedata(31 downto 16);
+			HYBRIDCPU_BYTEENABLE <= from_hps_byteenable(3 downto 2);
+		end if;
+	end process;
 
-	HYBRIDCPU_ADDRESS <= HYBRIDCPU_ADDRESS_REG;
-	HYBRIDCPU_READ <= HYBRIDCPU_READ_REG;
-	HYBRIDCPU_WRITE <= HYBRIDCPU_WRITE_REG;
-	HYBRIDCPU_WRITEDATA <= HYBRIDCPU_WRITEDATA_REG;
-	HYBRIDCPU_BYTEENABLE <= HYBRIDCPU_BYTEENABLE_REG;
+	process(read_word,HYBRIDCPU_READDATA,TO_HPS_READDATA_REG)
+	begin
+		TO_HPS_READDATA_NEXT <= TO_HPS_READDATA_REG;
+
+		if read_word(0)='1' then
+			TO_HPS_READDATA_NEXT(15 downto 0) <= HYBRIDCPU_READDATA;
+		end if;
+		if read_word(1)='1' then
+			TO_HPS_READDATA_NEXT(31 downto 16) <= HYBRIDCPU_READDATA;
+		end if;
+	end process;
+	to_hps_readdata <= TO_HPS_READDATA_NEXT;
+
 END vhdl;

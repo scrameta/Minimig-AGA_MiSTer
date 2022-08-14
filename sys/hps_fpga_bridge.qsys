@@ -13,7 +13,7 @@
    {
       datum _sortIndex
       {
-         value = "3";
+         value = "2";
          type = "int";
       }
    }
@@ -22,6 +22,22 @@
       datum baseAddress
       {
          value = "16777216";
+         type = "String";
+      }
+   }
+   element arm_regs_avalon_0
+   {
+      datum _sortIndex
+      {
+         value = "3";
+         type = "int";
+      }
+   }
+   element arm_regs_avalon_0.avalon_slave_0
+   {
+      datum baseAddress
+      {
+         value = "16777224";
          type = "String";
       }
    }
@@ -49,17 +65,49 @@
          type = "String";
       }
    }
+   element hps_fpga_bridge
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element hps_fpga_bridge
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
+   element hps_fpga_bridge
+   {
+      datum _originalDeviceFamily
+      {
+         value = "Cyclone V";
+         type = "String";
+      }
+   }
    element hybridcpu0
    {
       datum _sortIndex
       {
-         value = "2";
+         value = "4";
          type = "int";
+      }
+   }
+   element hybridcpu0.avalon_slave_0
+   {
+      datum baseAddress
+      {
+         value = "0";
+         type = "String";
       }
    }
 }
 ]]></parameter>
- <parameter name="clockCrossingAdapter" value="HANDSHAKE" />
+ <parameter name="clockCrossingAdapter" value="AUTO" />
  <parameter name="device" value="5CSEBA6U23I7" />
  <parameter name="deviceFamily" value="Cyclone V" />
  <parameter name="deviceSpeedGrade" value="7" />
@@ -70,7 +118,7 @@
  <parameter name="hdlLanguage" value="VERILOG" />
  <parameter name="hideFromIPCatalog" value="false" />
  <parameter name="lockedInterfaceDefinition" value="" />
- <parameter name="maxAdditionalLatency" value="1" />
+ <parameter name="maxAdditionalLatency" value="0" />
  <parameter name="projectName" value="" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="0" />
@@ -88,11 +136,21 @@
    internal="arm_irq_avalon_0.conduit_end"
    type="conduit"
    dir="end" />
+ <interface
+   name="avalonregs"
+   internal="arm_regs_avalon_0.conduit_end"
+   type="conduit"
+   dir="end" />
  <interface name="clk" internal="clk_0.clk_in" type="clock" dir="end" />
  <interface name="memory" internal="hps_0.memory" type="conduit" dir="end" />
  <module
    name="arm_irq_avalon_0"
    kind="arm_irq_avalon"
+   version="1.0"
+   enabled="1" />
+ <module
+   name="arm_regs_avalon_0"
+   kind="arm_regs_avalon"
    version="1.0"
    enabled="1" />
  <module name="clk_0" kind="clock_source" version="20.1" enabled="1">
@@ -636,21 +694,29 @@
    kind="avalon"
    version="20.1"
    start="hps_0.h2f_axi_master"
-   end="hybridcpu0.avalon_slave_0">
+   end="arm_irq_avalon_0.avalon_slave_0">
   <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="baseAddress" value="0x01000000" />
   <parameter name="defaultConnection" value="false" />
  </connection>
  <connection
    kind="avalon"
    version="20.1"
    start="hps_0.h2f_axi_master"
-   end="arm_irq_avalon_0.avalon_slave_0">
+   end="arm_regs_avalon_0.avalon_slave_0">
   <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x01000000" />
+  <parameter name="baseAddress" value="0x01000008" />
   <parameter name="defaultConnection" value="false" />
  </connection>
- <connection kind="clock" version="20.1" start="clk_0.clk" end="hybridcpu0.clock" />
+ <connection
+   kind="avalon"
+   version="20.1"
+   start="hps_0.h2f_axi_master"
+   end="hybridcpu0.avalon_slave_0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
  <connection
    kind="clock"
    version="20.1"
@@ -660,12 +726,13 @@
    kind="clock"
    version="20.1"
    start="clk_0.clk"
-   end="hps_0.h2f_axi_clock" />
+   end="arm_regs_avalon_0.clock" />
+ <connection kind="clock" version="20.1" start="clk_0.clk" end="hybridcpu0.clock" />
  <connection
-   kind="reset"
+   kind="clock"
    version="20.1"
-   start="clk_0.clk_reset"
-   end="hybridcpu0.reset" />
+   start="clk_0.clk"
+   end="hps_0.h2f_axi_clock" />
  <connection
    kind="reset"
    version="20.1"
@@ -674,10 +741,20 @@
  <connection
    kind="reset"
    version="20.1"
+   start="clk_0.clk_reset"
+   end="arm_regs_avalon_0.reset" />
+ <connection
+   kind="reset"
+   version="20.1"
+   start="clk_0.clk_reset"
+   end="hybridcpu0.reset" />
+ <connection
+   kind="reset"
+   version="20.1"
    start="hps_0.h2f_reset"
    end="clk_0.clk_in_reset" />
- <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
+ <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="AUTO" />
  <interconnectRequirement for="$system" name="qsys_mm.enableEccProtection" value="FALSE" />
  <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="FALSE" />
- <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
+ <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="0" />
 </system>

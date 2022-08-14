@@ -5,35 +5,39 @@
 `timescale 1 ps / 1 ps
 module hps_fpga_bridge (
 		input wire hps_0_h2f_reset_reset,
-		output wire [22:0] avalon1_hybridcpu_address,    //   avalon1.hybridcpu_address
-		output wire [1:0]  avalon1_hybridcpu_byteenable, //          .hybridcpu_byteenable
-		input  wire        avalon1_hybridcpu_complete,   //          .hybridcpu_complete
-		output wire        avalon1_hybridcpu_read,       //          .hybridcpu_read
-		input  wire [15:0] avalon1_hybridcpu_readdata,   //          .hybridcpu_readdata
-		input  wire        avalon1_hybridcpu_sync_clk,   //          .hybridcpu_sync_clk
-		output wire        avalon1_hybridcpu_write,      //          .hybridcpu_write
-		output wire [15:0] avalon1_hybridcpu_writedata,  //          .hybridcpu_writedata
-		output wire        avalon1_hybridcpu_request,    //          .hybridcpu_request
-		input  wire [2:0]  avalonirq_avalon_irq_n,       // avalonirq.avalon_irq_n
-		input  wire        avalonirq_avalon_sync_clk,    //          .avalon_sync_clk
-		input  wire        avalonirq_avalon_reset_n,     //          .avalon_reset_n
-		input  wire        clk_clk,                      //       clk.clk
-		output wire [14:0] memory_mem_a,                 //    memory.mem_a
-		output wire [2:0]  memory_mem_ba,                //          .mem_ba
-		output wire        memory_mem_ck,                //          .mem_ck
-		output wire        memory_mem_ck_n,              //          .mem_ck_n
-		output wire        memory_mem_cke,               //          .mem_cke
-		output wire        memory_mem_cs_n,              //          .mem_cs_n
-		output wire        memory_mem_ras_n,             //          .mem_ras_n
-		output wire        memory_mem_cas_n,             //          .mem_cas_n
-		output wire        memory_mem_we_n,              //          .mem_we_n
-		output wire        memory_mem_reset_n,           //          .mem_reset_n
-		inout  wire [31:0] memory_mem_dq,                //          .mem_dq
-		inout  wire [3:0]  memory_mem_dqs,               //          .mem_dqs
-		inout  wire [3:0]  memory_mem_dqs_n,             //          .mem_dqs_n
-		output wire        memory_mem_odt,               //          .mem_odt
-		output wire [3:0]  memory_mem_dm,                //          .mem_dm
-		input  wire        memory_oct_rzqin              //          .oct_rzqin
+		output wire [22:0] avalon1_hybridcpu_address,    //    avalon1.hybridcpu_address
+		output wire [1:0]  avalon1_hybridcpu_byteenable, //           .hybridcpu_byteenable
+		input  wire        avalon1_hybridcpu_complete,   //           .hybridcpu_complete
+		output wire        avalon1_hybridcpu_read,       //           .hybridcpu_read
+		input  wire [15:0] avalon1_hybridcpu_readdata,   //           .hybridcpu_readdata
+		input  wire        avalon1_hybridcpu_sync_clk,   //           .hybridcpu_sync_clk
+		output wire        avalon1_hybridcpu_write,      //           .hybridcpu_write
+		output wire [15:0] avalon1_hybridcpu_writedata,  //           .hybridcpu_writedata
+		output wire        avalon1_hybridcpu_request,    //           .hybridcpu_request
+		output wire        avalon1_hybridcpu_longword,   //           .hybridcpu_longword
+		input  wire [2:0]  avalonirq_avalon_irq_n,       //  avalonirq.avalon_irq_n
+		input  wire        avalonirq_avalon_sync_clk,    //           .avalon_sync_clk
+		input  wire        avalonirq_avalon_reset_n,     //           .avalon_reset_n
+		output wire [3:0]  avalonregs_avalon_cacr,       // avalonregs.avalon_cacr
+		input  wire        avalonregs_avalon_sync_clk,   //           .avalon_sync_clk
+		output wire [31:0] avalonregs_avalon_vbr,        //           .avalon_vbr
+		input  wire        clk_clk,                      //        clk.clk
+		output wire [14:0] memory_mem_a,                 //     memory.mem_a
+		output wire [2:0]  memory_mem_ba,                //           .mem_ba
+		output wire        memory_mem_ck,                //           .mem_ck
+		output wire        memory_mem_ck_n,              //           .mem_ck_n
+		output wire        memory_mem_cke,               //           .mem_cke
+		output wire        memory_mem_cs_n,              //           .mem_cs_n
+		output wire        memory_mem_ras_n,             //           .mem_ras_n
+		output wire        memory_mem_cas_n,             //           .mem_cas_n
+		output wire        memory_mem_we_n,              //           .mem_we_n
+		output wire        memory_mem_reset_n,           //           .mem_reset_n
+		inout  wire [31:0] memory_mem_dq,                //           .mem_dq
+		inout  wire [3:0]  memory_mem_dqs,               //           .mem_dqs
+		inout  wire [3:0]  memory_mem_dqs_n,             //           .mem_dqs_n
+		output wire        memory_mem_odt,               //           .mem_odt
+		output wire [3:0]  memory_mem_dm,                //           .mem_dm
+		input  wire        memory_oct_rzqin              //           .oct_rzqin
 	);
 
 	//wire         hps_0_h2f_reset_reset;                                         // hps_0:h2f_rst_n -> [rst_controller:reset_in0, rst_controller_001:reset_in0]
@@ -73,18 +77,21 @@ module hps_fpga_bridge (
 	wire   [2:0] hps_0_h2f_axi_master_awsize;                                   // hps_0:h2f_AWSIZE -> mm_interconnect_0:hps_0_h2f_axi_master_awsize
 	wire         hps_0_h2f_axi_master_awvalid;                                  // hps_0:h2f_AWVALID -> mm_interconnect_0:hps_0_h2f_axi_master_awvalid
 	wire         hps_0_h2f_axi_master_rvalid;                                   // mm_interconnect_0:hps_0_h2f_axi_master_rvalid -> hps_0:h2f_RVALID
-	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_chipselect;        // mm_interconnect_0:hybridcpu0_avalon_slave_0_chipselect -> hybridcpu0:CHIPSELECT
-	wire  [15:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_readdata;          // hybridcpu0:READDATA -> mm_interconnect_0:hybridcpu0_avalon_slave_0_readdata
-	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_waitrequest;       // hybridcpu0:WAITREQUEST -> mm_interconnect_0:hybridcpu0_avalon_slave_0_waitrequest
-	wire  [22:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_address;           // mm_interconnect_0:hybridcpu0_avalon_slave_0_address -> hybridcpu0:ADDRESS
-	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_read;              // mm_interconnect_0:hybridcpu0_avalon_slave_0_read -> hybridcpu0:READ
-	wire   [1:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_byteenable;        // mm_interconnect_0:hybridcpu0_avalon_slave_0_byteenable -> hybridcpu0:BYTEENABLE
-	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_write;             // mm_interconnect_0:hybridcpu0_avalon_slave_0_write -> hybridcpu0:WRITE
-	wire  [15:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_writedata;         // mm_interconnect_0:hybridcpu0_avalon_slave_0_writedata -> hybridcpu0:WRITEDATA
 	wire   [7:0] mm_interconnect_0_arm_irq_avalon_0_avalon_slave_0_readdata;    // arm_irq_avalon_0:READDATA -> mm_interconnect_0:arm_irq_avalon_0_avalon_slave_0_readdata
 	wire         mm_interconnect_0_arm_irq_avalon_0_avalon_slave_0_waitrequest; // arm_irq_avalon_0:WAITREQUEST -> mm_interconnect_0:arm_irq_avalon_0_avalon_slave_0_waitrequest
 	wire         mm_interconnect_0_arm_irq_avalon_0_avalon_slave_0_read;        // mm_interconnect_0:arm_irq_avalon_0_avalon_slave_0_read -> arm_irq_avalon_0:READ
-	wire         rst_controller_reset_out_reset;                                // rst_controller:reset_out -> [arm_irq_avalon_0:RESET_N, hybridcpu0:RESET_N, mm_interconnect_0:hybridcpu0_reset_reset_bridge_in_reset_reset]
+	wire   [0:0] mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_address;    // mm_interconnect_0:arm_regs_avalon_0_avalon_slave_0_address -> arm_regs_avalon_0:ADDRESS
+	wire         mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_write;      // mm_interconnect_0:arm_regs_avalon_0_avalon_slave_0_write -> arm_regs_avalon_0:WRITE
+	wire  [31:0] mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_writedata;  // mm_interconnect_0:arm_regs_avalon_0_avalon_slave_0_writedata -> arm_regs_avalon_0:WRITEDATA
+	wire  [31:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_readdata;          // hybridcpu0:READDATA -> mm_interconnect_0:hybridcpu0_avalon_slave_0_readdata
+	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_waitrequest;       // hybridcpu0:WAITREQUEST -> mm_interconnect_0:hybridcpu0_avalon_slave_0_waitrequest
+	wire  [21:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_address;           // mm_interconnect_0:hybridcpu0_avalon_slave_0_address -> hybridcpu0:ADDRESS
+	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_read;              // mm_interconnect_0:hybridcpu0_avalon_slave_0_read -> hybridcpu0:READ
+	wire   [3:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_byteenable;        // mm_interconnect_0:hybridcpu0_avalon_slave_0_byteenable -> hybridcpu0:BYTEENABLE
+	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_readdatavalid;     // hybridcpu0:READDATAVALID -> mm_interconnect_0:hybridcpu0_avalon_slave_0_readdatavalid
+	wire         mm_interconnect_0_hybridcpu0_avalon_slave_0_write;             // mm_interconnect_0:hybridcpu0_avalon_slave_0_write -> hybridcpu0:WRITE
+	wire  [31:0] mm_interconnect_0_hybridcpu0_avalon_slave_0_writedata;         // mm_interconnect_0:hybridcpu0_avalon_slave_0_writedata -> hybridcpu0:WRITEDATA
+	wire         rst_controller_reset_out_reset;                                // rst_controller:reset_out -> [arm_irq_avalon_0:RESET_N, arm_regs_avalon_0:RESET_N, hybridcpu0:RESET_N, mm_interconnect_0:arm_irq_avalon_0_reset_reset_bridge_in_reset_reset]
 	wire         rst_controller_001_reset_out_reset;                            // rst_controller_001:reset_out -> mm_interconnect_0:hps_0_h2f_axi_master_agent_clk_reset_reset_bridge_in_reset_reset
 
 	arm_irq_avalon arm_irq_avalon_0 (
@@ -96,6 +103,17 @@ module hps_fpga_bridge (
 		.AVALON_IRQ_N    (avalonirq_avalon_irq_n),                                        //    conduit_end.avalon_irq_n
 		.AVALON_SYNC_CLK (avalonirq_avalon_sync_clk),                                     //               .avalon_sync_clk
 		.AVALON_RESET_N  (avalonirq_avalon_reset_n)                                       //               .avalon_reset_n
+	);
+
+	arm_regs_avalon arm_regs_avalon_0 (
+		.CLK             (clk_clk),                                                      //          clock.clk
+		.RESET_N         (~rst_controller_reset_out_reset),                              //          reset.reset_n
+		.AVALON_CACR     (avalonregs_avalon_cacr),                                       //    conduit_end.avalon_cacr
+		.AVALON_SYNC_CLK (avalonregs_avalon_sync_clk),                                   //               .avalon_sync_clk
+		.AVALON_VBR      (avalonregs_avalon_vbr),                                        //               .avalon_vbr
+		.WRITE           (mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_write),     // avalon_slave_0.write
+		.ADDRESS         (mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_address),   //               .address
+		.WRITEDATA       (mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_writedata)  //               .writedata
 	);
 
 	hps_fpga_bridge_hps_0 #(
@@ -159,25 +177,26 @@ module hps_fpga_bridge (
 	);
 
 	arm_avalon hybridcpu0 (
-		.CLK                  (clk_clk),                                                 //          clock.clk
-		.RESET_N              (~rst_controller_reset_out_reset),                         //          reset.reset_n
-		.CHIPSELECT           (mm_interconnect_0_hybridcpu0_avalon_slave_0_chipselect),  // avalon_slave_0.chipselect
-		.ADDRESS              (mm_interconnect_0_hybridcpu0_avalon_slave_0_address),     //               .address
-		.READ                 (mm_interconnect_0_hybridcpu0_avalon_slave_0_read),        //               .read
-		.READDATA             (mm_interconnect_0_hybridcpu0_avalon_slave_0_readdata),    //               .readdata
-		.WRITE                (mm_interconnect_0_hybridcpu0_avalon_slave_0_write),       //               .write
-		.WRITEDATA            (mm_interconnect_0_hybridcpu0_avalon_slave_0_writedata),   //               .writedata
-		.BYTEENABLE           (mm_interconnect_0_hybridcpu0_avalon_slave_0_byteenable),  //               .byteenable
-		.WAITREQUEST          (mm_interconnect_0_hybridcpu0_avalon_slave_0_waitrequest), //               .waitrequest
-		.HYBRIDCPU_ADDRESS    (avalon1_hybridcpu_address),                               //    conduit_end.hybridcpu_address
-		.HYBRIDCPU_BYTEENABLE (avalon1_hybridcpu_byteenable),                            //               .hybridcpu_byteenable
-		.HYBRIDCPU_COMPLETE   (avalon1_hybridcpu_complete),                              //               .hybridcpu_complete
-		.HYBRIDCPU_READ       (avalon1_hybridcpu_read),                                  //               .hybridcpu_read
-		.HYBRIDCPU_READDATA   (avalon1_hybridcpu_readdata),                              //               .hybridcpu_readdata
-		.HYBRIDCPU_SYNC_CLK   (avalon1_hybridcpu_sync_clk),                              //               .hybridcpu_sync_clk
-		.HYBRIDCPU_WRITE      (avalon1_hybridcpu_write),                                 //               .hybridcpu_write
-		.HYBRIDCPU_WRITEDATA  (avalon1_hybridcpu_writedata),                             //               .hybridcpu_writedata
-		.HYBRIDCPU_REQUEST    (avalon1_hybridcpu_request)                                //               .hybridcpu_request
+		.CLK                  (clk_clk),                                                   //          clock.clk
+		.RESET_N              (~rst_controller_reset_out_reset),                           //          reset.reset_n
+		.ADDRESS              (mm_interconnect_0_hybridcpu0_avalon_slave_0_address),       // avalon_slave_0.address
+		.READ                 (mm_interconnect_0_hybridcpu0_avalon_slave_0_read),          //               .read
+		.READDATA             (mm_interconnect_0_hybridcpu0_avalon_slave_0_readdata),      //               .readdata
+		.WRITE                (mm_interconnect_0_hybridcpu0_avalon_slave_0_write),         //               .write
+		.WRITEDATA            (mm_interconnect_0_hybridcpu0_avalon_slave_0_writedata),     //               .writedata
+		.BYTEENABLE           (mm_interconnect_0_hybridcpu0_avalon_slave_0_byteenable),    //               .byteenable
+		.WAITREQUEST          (mm_interconnect_0_hybridcpu0_avalon_slave_0_waitrequest),   //               .waitrequest
+		.READDATAVALID        (mm_interconnect_0_hybridcpu0_avalon_slave_0_readdatavalid), //               .readdatavalid
+		.HYBRIDCPU_ADDRESS    (avalon1_hybridcpu_address),                                 //    conduit_end.hybridcpu_address
+		.HYBRIDCPU_BYTEENABLE (avalon1_hybridcpu_byteenable),                              //               .hybridcpu_byteenable
+		.HYBRIDCPU_COMPLETE   (avalon1_hybridcpu_complete),                                //               .hybridcpu_complete
+		.HYBRIDCPU_READ       (avalon1_hybridcpu_read),                                    //               .hybridcpu_read
+		.HYBRIDCPU_READDATA   (avalon1_hybridcpu_readdata),                                //               .hybridcpu_readdata
+		.HYBRIDCPU_SYNC_CLK   (avalon1_hybridcpu_sync_clk),                                //               .hybridcpu_sync_clk
+		.HYBRIDCPU_WRITE      (avalon1_hybridcpu_write),                                   //               .hybridcpu_write
+		.HYBRIDCPU_WRITEDATA  (avalon1_hybridcpu_writedata),                               //               .hybridcpu_writedata
+		.HYBRIDCPU_REQUEST    (avalon1_hybridcpu_request),                                 //               .hybridcpu_request
+		.HYBRIDCPU_LONGWORD   (avalon1_hybridcpu_longword)                                 //               .hybridcpu_longword
 	);
 
 	hps_fpga_bridge_mm_interconnect_0 mm_interconnect_0 (
@@ -218,19 +237,22 @@ module hps_fpga_bridge (
 		.hps_0_h2f_axi_master_rvalid                                      (hps_0_h2f_axi_master_rvalid),                                   //                                                           .rvalid
 		.hps_0_h2f_axi_master_rready                                      (hps_0_h2f_axi_master_rready),                                   //                                                           .rready
 		.clk_0_clk_clk                                                    (clk_clk),                                                       //                                                  clk_0_clk.clk
+		.arm_irq_avalon_0_reset_reset_bridge_in_reset_reset               (rst_controller_reset_out_reset),                                //               arm_irq_avalon_0_reset_reset_bridge_in_reset.reset
 		.hps_0_h2f_axi_master_agent_clk_reset_reset_bridge_in_reset_reset (rst_controller_001_reset_out_reset),                            // hps_0_h2f_axi_master_agent_clk_reset_reset_bridge_in_reset.reset
-		.hybridcpu0_reset_reset_bridge_in_reset_reset                     (rst_controller_reset_out_reset),                                //                     hybridcpu0_reset_reset_bridge_in_reset.reset
 		.arm_irq_avalon_0_avalon_slave_0_read                             (mm_interconnect_0_arm_irq_avalon_0_avalon_slave_0_read),        //                            arm_irq_avalon_0_avalon_slave_0.read
 		.arm_irq_avalon_0_avalon_slave_0_readdata                         (mm_interconnect_0_arm_irq_avalon_0_avalon_slave_0_readdata),    //                                                           .readdata
 		.arm_irq_avalon_0_avalon_slave_0_waitrequest                      (mm_interconnect_0_arm_irq_avalon_0_avalon_slave_0_waitrequest), //                                                           .waitrequest
+		.arm_regs_avalon_0_avalon_slave_0_address                         (mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_address),    //                           arm_regs_avalon_0_avalon_slave_0.address
+		.arm_regs_avalon_0_avalon_slave_0_write                           (mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_write),      //                                                           .write
+		.arm_regs_avalon_0_avalon_slave_0_writedata                       (mm_interconnect_0_arm_regs_avalon_0_avalon_slave_0_writedata),  //                                                           .writedata
 		.hybridcpu0_avalon_slave_0_address                                (mm_interconnect_0_hybridcpu0_avalon_slave_0_address),           //                                  hybridcpu0_avalon_slave_0.address
 		.hybridcpu0_avalon_slave_0_write                                  (mm_interconnect_0_hybridcpu0_avalon_slave_0_write),             //                                                           .write
 		.hybridcpu0_avalon_slave_0_read                                   (mm_interconnect_0_hybridcpu0_avalon_slave_0_read),              //                                                           .read
 		.hybridcpu0_avalon_slave_0_readdata                               (mm_interconnect_0_hybridcpu0_avalon_slave_0_readdata),          //                                                           .readdata
 		.hybridcpu0_avalon_slave_0_writedata                              (mm_interconnect_0_hybridcpu0_avalon_slave_0_writedata),         //                                                           .writedata
 		.hybridcpu0_avalon_slave_0_byteenable                             (mm_interconnect_0_hybridcpu0_avalon_slave_0_byteenable),        //                                                           .byteenable
-		.hybridcpu0_avalon_slave_0_waitrequest                            (mm_interconnect_0_hybridcpu0_avalon_slave_0_waitrequest),       //                                                           .waitrequest
-		.hybridcpu0_avalon_slave_0_chipselect                             (mm_interconnect_0_hybridcpu0_avalon_slave_0_chipselect)         //                                                           .chipselect
+		.hybridcpu0_avalon_slave_0_readdatavalid                          (mm_interconnect_0_hybridcpu0_avalon_slave_0_readdatavalid),     //                                                           .readdatavalid
+		.hybridcpu0_avalon_slave_0_waitrequest                            (mm_interconnect_0_hybridcpu0_avalon_slave_0_waitrequest)        //                                                           .waitrequest
 	);
 
 	altera_reset_controller #(

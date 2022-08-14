@@ -79,9 +79,12 @@ module cpu_wrapper
 	input wire        hybridcpu_read,        
 	output  wire [15:0] hybridcpu_readdata,    
 	input  wire        hybridcpu_request, 
+	input  wire        hybridcpu_longword, 
 	output  wire        hybridcpu_complete, 
 	input wire        hybridcpu_write,       
-	input wire [15:0] hybridcpu_writedata
+	input wire [15:0] hybridcpu_writedata,
+	input wire [3:0]  hybridcpu_cacr,
+	input wire [31:0] hybridcpu_vbr
 );
 
 assign ramsel       = cpu_req & ~sel_nmi_vector & (sel_zram | sel_chipram | sel_kickram | sel_dd | sel_rtg);
@@ -226,37 +229,22 @@ wire        hybrid_lds_p;
 wire        hybrid_reset_out_p;
 wire        hybrid_longword;
 
-reg  hybridcpu_request_reg;
-wire  hybridcpu_request_next;
-wire  hybridcpu_request_nocancel_next;
-
-always @(posedge clk) begin
-	if (~reset | ~reset_out) begin
-		hybridcpu_request_reg <= 0;
-	end
-	else begin
-		hybridcpu_request_reg <= hybridcpu_request_next;
-	end
-end
-
 assign hybridcpu_rst_n = reset;
 assign hybridcpu_clk_fast = clk_fast;
 assign hybridcpu_clk_access = clk;
 
-assign hybridcpu_request_next = (hybridcpu_request | hybridcpu_request_reg) & ~hybridcpu_complete;
-assign hybridcpu_request_nocancel_next = hybridcpu_request | hybridcpu_request_reg;
 assign hybridcpu_readdata = {cpu_din[7:0],cpu_din[15:8]};
-assign hybridcpu_complete = chipready | ramready;
+assign hybridcpu_complete = chipready | ramready | fastchip_ready;
 assign hybrid_cpu_addr_p = {hybridcpu_address,1'd0};
 assign hybrid_cpu_dout_p = {hybridcpu_writedata[7:0],hybridcpu_writedata[15:8]};
 assign hybrid_wr_p = ~hybridcpu_write;
 assign hybrid_uds_p  = ~hybridcpu_byteenable[0];
 assign hybrid_lds_p  = ~hybridcpu_byteenable[1];
 assign hybrid_reset_out_p = 1'd1;// For now...
-assign hybrid_cpustate_p  = {hybridcpu_request_nocancel_next,~hybridcpu_request_nocancel_next| (hybridcpu_request_nocancel_next&hybridcpu_write)}; // 0: fetch code, 1: no memaccess, 2: read data, 3: write data
-assign hybrid_cacr_p     = 1; //TODO
-assign hybrid_vbr_p       = 0; //TODO
-assign hybrid_longword       = 0; //TODO
+assign hybrid_cpustate_p  = {hybridcpu_request,~hybridcpu_request |(hybridcpu_request&hybridcpu_write)}; // 0: fetch code, 1: no memaccess, 2: read data, 3: write data
+assign hybrid_cacr_p      = hybridcpu_cacr;
+assign hybrid_vbr_p       = hybridcpu_vbr;
+assign hybrid_longword    = hybridcpu_longword;
 
 // TG68k plumbing
 wire [15:0] cpu_dout_p;

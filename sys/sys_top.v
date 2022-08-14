@@ -170,6 +170,9 @@ module sys_top
 		.avalonirq_avalon_irq_n(hybridcpu_irq_n),
 		.avalonirq_avalon_sync_clk(hybridcpu_clk_access),
 		.avalonirq_avalon_reset_n(hybridcpu_rst_n),
+		.avalonregs_avalon_cacr(hybridcpu_cacr),
+		.avalonregs_avalon_sync_clk(hybridcpu_clk_access),
+		.avalonregs_avalon_vbr(hybridcpu_vbr),
 		.avalon1_hybridcpu_sync_clk    (hybridcpu_clk_access),
 		.avalon1_hybridcpu_address     (hybridcpu_address),   
 		.avalon1_hybridcpu_byteenable  (hybridcpu_byteenable),
@@ -177,8 +180,9 @@ module sys_top
 		.avalon1_hybridcpu_readdata    (hybridcpu_readdata),  
 		.avalon1_hybridcpu_write       (hybridcpu_write),     
 		.avalon1_hybridcpu_writedata   (hybridcpu_writedata),
-		.avalon1_hybridcpu_complete   (hybridcpu_complete),
-		.avalon1_hybridcpu_request   (hybridcpu_request)    
+		.avalon1_hybridcpu_complete    (hybridcpu_complete),
+		.avalon1_hybridcpu_request     (hybridcpu_request),
+		.avalon1_hybridcpu_longword    (hybridcpu_longword)
 	);
 `endif	
 
@@ -1635,8 +1639,11 @@ wire [13:0] fb_stride;
 	wire [15:0] hybridcpu_readdata;
 	wire        hybridcpu_complete;
 	wire        hybridcpu_request;
+	wire        hybridcpu_longword;
 	wire        hybridcpu_write;
 	wire [15:0] hybridcpu_writedata;
+	wire [3:0]  hybridcpu_cacr;
+	wire [31:0] hybridcpu_vbr;
 `endif
 
 reg  [1:0] sl_r;
@@ -1769,10 +1776,13 @@ emu emu
 	.hybridcpu_byteenable  (hybridcpu_byteenable),
 	.hybridcpu_read        (hybridcpu_read),     
 	.hybridcpu_readdata    (hybridcpu_readdata),
-	.hybridcpu_complete (hybridcpu_complete),
-	.hybridcpu_request (hybridcpu_request),
+	.hybridcpu_complete    (hybridcpu_complete),
+	.hybridcpu_request     (hybridcpu_request),
 	.hybridcpu_write       (hybridcpu_write),  
 	.hybridcpu_writedata   (hybridcpu_writedata),
+	.hybridcpu_longword    (hybridcpu_longword ),
+	.hybridcpu_cacr        (hybridcpu_cacr),
+	.hybridcpu_vbr         (hybridcpu_vbr),
 `endif
 
 	.USER_OUT(user_out),
